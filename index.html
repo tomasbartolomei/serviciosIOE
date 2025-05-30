@@ -72,9 +72,9 @@
 
     submitButton.addEventListener('click', async () => {
       const file = fileInput.files[0];
-      const service = serviceSelect.value;
+      const servicio = serviceSelect.value;  // CAMBIO: variable se llama "servicio"
 
-      if (!file || !service) {
+      if (!file || !servicio) {
         alert("Seleccioná un archivo y un servicio.");
         return;
       }
@@ -86,9 +86,9 @@
       reader.onload = async function () {
         const base64 = reader.result.split(',')[1]; // Quita el encabezado data:
         const payload = {
-          filename: file.name,
-          service: service,
-          excel_base64: base64
+          // "filename": file.name, // opcional si no usás en backend
+          "servicio": servicio,      // CAMBIO: clave se llama "servicio"
+          "excel_base64": base64
         };
 
         try {
@@ -109,7 +109,7 @@
 
           // Obtener nombre del archivo si viene desde Content-Disposition
           const contentDisposition = response.headers.get("Content-Disposition");
-          let filename = "resultado.txt";
+          let filename = "resultado.zip"; // Mejor poner zip ya que Lambda envía zip
           if (contentDisposition) {
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
             if (match && match[1]) filename = match[1];
