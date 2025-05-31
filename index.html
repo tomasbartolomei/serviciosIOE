@@ -64,9 +64,7 @@
     const statusText = document.getElementById('status');
 
     function validateForm() {
-      const hasFile = fileInput.files.length > 0;
-      const hasService = serviceSelect.value !== "";
-      submitButton.disabled = !(hasFile && hasService);
+      submitButton.disabled = !(fileInput.files.length && serviceSelect.value);
     }
 
     fileInput.addEventListener('change', validateForm);
@@ -74,7 +72,7 @@
 
     submitButton.addEventListener('click', async () => {
       const file = fileInput.files[0];
-      const servicio = serviceSelect.value;
+      const servicio = serviceSelect.value;  // CAMBIO: variable se llama "servicio"
 
       if (!file || !servicio) {
         alert("Seleccioná un archivo y un servicio.");
@@ -86,12 +84,11 @@
 
       const reader = new FileReader();
       reader.onload = async function () {
-        const base64 = reader.result.split(',')[1]; // Quitar el encabezado "data:..."
-
+        const base64 = reader.result.split(',')[1]; // Quita el encabezado data:
         const payload = {
-          body: base64,
-          isBase64Encoded: true,
-          servicio: servicio
+          // "filename": file.name, // opcional si no usás en backend
+          "servicio": servicio,      // CAMBIO: clave se llama "servicio"
+          "excel_base64": base64
         };
 
         try {
@@ -110,9 +107,9 @@
           const a = document.createElement('a');
           a.href = downloadUrl;
 
-          // Obtener nombre del archivo desde headers si viene
+          // Obtener nombre del archivo si viene desde Content-Disposition
           const contentDisposition = response.headers.get("Content-Disposition");
-          let filename = "resultado.zip";
+          let filename = "resultado.zip"; // Mejor poner zip ya que Lambda envía zip
           if (contentDisposition) {
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
             if (match && match[1]) filename = match[1];
@@ -121,10 +118,10 @@
           a.download = filename;
           a.click();
           URL.revokeObjectURL(downloadUrl);
-          statusText.textContent = "✅ Archivo descargado correctamente.";
+          statusText.textContent = "Archivo descargado correctamente.";
         } catch (err) {
           console.error(err);
-          statusText.textContent = "❌ Error al procesar el archivo.";
+          statusText.textContent = "Error al procesar el archivo.";
         } finally {
           submitButton.disabled = false;
         }
