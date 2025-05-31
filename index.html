@@ -64,7 +64,9 @@
     const statusText = document.getElementById('status');
 
     function validateForm() {
-      submitButton.disabled = !(fileInput.files.length && serviceSelect.value);
+      const hasFile = fileInput.files.length > 0;
+      const hasService = serviceSelect.value !== "";
+      submitButton.disabled = !(hasFile && hasService);
     }
 
     fileInput.addEventListener('change', validateForm);
@@ -72,7 +74,7 @@
 
     submitButton.addEventListener('click', async () => {
       const file = fileInput.files[0];
-      const servicio = serviceSelect.value;  // CAMBIO: variable se llama "servicio"
+      const servicio = serviceSelect.value;
 
       if (!file || !servicio) {
         alert("Seleccioná un archivo y un servicio.");
@@ -83,50 +85,14 @@
       statusText.textContent = "Procesando...";
 
       const reader = new FileReader();
-reader.onload = async function () {
-  const base64 = reader.result.split(',')[1]; // Quita el encabezado data:
+      reader.onload = async function () {
+        const base64 = reader.result.split(',')[1]; // quitar encabezado "data:..."
 
-  const payload = {
-    body: base64,
-    isBase64Encoded: true,
-    servicio: servicio
-  };
-
-  try {
-    const response = await fetch('https://6avq96bjk9.execute-api.eu-north-1.amazonaws.com/funcion_prueba', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error("Error al generar el archivo");
-
-    const blob = await response.blob();
-    const downloadUrl = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-
-    // Obtener nombre del archivo si viene desde Content-Disposition
-    const contentDisposition = response.headers.get("Content-Disposition");
-    let filename = "resultado.zip";
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename="?([^"]+)"?/);
-      if (match && match[1]) filename = match[1];
-    }
-
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(downloadUrl);
-    statusText.textContent = "Archivo descargado correctamente.";
-  } catch (err) {
-    console.error(err);
-    statusText.textContent = "Error al procesar el archivo.";
-  } finally {
-    submitButton.disabled = false;
-  }
-};
+        const payload = {
+          body: base64,
+          isBase64Encoded: true,
+          servicio: servicio
+        };
 
         try {
           const response = await fetch('https://6avq96bjk9.execute-api.eu-north-1.amazonaws.com/funcion_prueba', {
@@ -144,9 +110,8 @@ reader.onload = async function () {
           const a = document.createElement('a');
           a.href = downloadUrl;
 
-          // Obtener nombre del archivo si viene desde Content-Disposition
           const contentDisposition = response.headers.get("Content-Disposition");
-          let filename = "resultado.zip"; // Mejor poner zip ya que Lambda envía zip
+          let filename = "resultado.zip";
           if (contentDisposition) {
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
             if (match && match[1]) filename = match[1];
@@ -155,10 +120,10 @@ reader.onload = async function () {
           a.download = filename;
           a.click();
           URL.revokeObjectURL(downloadUrl);
-          statusText.textContent = "Archivo descargado correctamente.";
+          statusText.textContent = "✅ Archivo descargado correctamente.";
         } catch (err) {
           console.error(err);
-          statusText.textContent = "Error al procesar el archivo.";
+          statusText.textContent = "❌ Error al procesar el archivo.";
         } finally {
           submitButton.disabled = false;
         }
