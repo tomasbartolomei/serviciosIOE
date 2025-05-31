@@ -86,7 +86,7 @@
 
       const reader = new FileReader();
       reader.onload = async function () {
-        const base64 = reader.result.split(',')[1]; // quitar encabezado "data:..."
+        const base64 = reader.result.split(',')[1]; // Quitar el encabezado "data:..."
 
         const payload = {
           body: base64,
@@ -110,6 +110,7 @@
           const a = document.createElement('a');
           a.href = downloadUrl;
 
+          // Obtener nombre del archivo desde headers si viene
           const contentDisposition = response.headers.get("Content-Disposition");
           let filename = "resultado.zip";
           if (contentDisposition) {
