@@ -44,13 +44,13 @@
     <label for="service">Seleccionar Servicio:</label>
     <select id="service" required>
       <option value="">-- Elegir una opción --</option>
-      <option value="s1">Servicio 1</option>
-      <option value="s2">Servicio 2</option>
-      <option value="s3">Servicio 3</option>
+      <option value="conexiones">Conexiones</option>
+      <option value="certificados">Certificados</option>
+      <option value="justificantes">Justificantes</option>
     </select>
 
     <label for="file">Subir archivo Excel (.xlsx):</label>
-    <input type="file" id="file" accept=".xlsx" required />
+    <input type="file" id="file" accept=".xlsx,.xls" required />
 
     <button id="submit" disabled>Enviar y Descargar</button>
 
@@ -58,6 +58,9 @@
   </div>
 
   <script>
+    // Variables para cambiar fácilmente
+    const API_ENDPOINT_BASE = 'https://6avq96bjk9.execute-api.eu-north-1.amazonaws.com/funcion_prueba';
+    
     const fileInput = document.getElementById('file');
     const serviceSelect = document.getElementById('service');
     const submitButton = document.getElementById('submit');
@@ -85,44 +88,43 @@
       const reader = new FileReader();
       reader.onload = async function () {
         try {
-          const base64Excel = reader.result.split(',')[1]; // Quita el encabezado data:
+          // reader.result es algo como "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,AAAA..."
+          // Separamos para obtener solo la base64
+          const base64Excel = reader.result.split(',')[1];
 
-          // JSON con servicio y excel_base64
-          const innerPayload = {
-            servicio: servicio,
-            excel_base64: base64Excel
-          };
+          // Armar URL con query string servicio
+          const url = `${API_ENDPOINT_BASE}?servicio=${encodeURIComponent(servicio)}`;
 
-          // Convertir JSON a string y luego a base64
-          const innerJsonStr = JSON.stringify(innerPayload);
-          const innerBase64 = btoa(innerJsonStr);
-
-          // Payload final que tu Lambda espera
-          const payload = {
-            body: innerBase64,
-            isBase64Encoded: true
-          };
-
-          const response = await fetch('https://6avq96bjk9.execute-api.eu-north-1.amazonaws.com/funcion_prueba', {
+          const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/octet-stream',  // archivo binario en base64
+              'file-name': file.name
             },
-            body: JSON.stringify(payload)
+            body: base64Excel,
           });
 
           if (!response.ok) throw new Error("Error al generar el archivo");
 
+          // Obtener blob del archivo respuesta
           const blob = await response.blob();
           const downloadUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = downloadUrl;
 
+          // Intentar obtener nombre desde headers (si tu Lambda lo envía)
           const contentDisposition = response.headers.get("Content-Disposition");
-          let filename = "resultado.zip";
+          let filename = "resultado";
           if (contentDisposition) {
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
             if (match && match[1]) filename = match[1];
+          } else {
+            // Si no hay header, agregar extensión según el tipo mime
+            const mimeType = blob.type;
+            if (mimeType === 'application/pdf') filename += ".pdf";
+            else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') filename += ".docx";
+            else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') filename += ".xlsx";
+            else filename += ".bin";
           }
 
           a.download = filename;
