@@ -58,9 +58,9 @@
   </div>
 
   <script>
-    // Variables para cambiar fácilmente
-    const API_ENDPOINT_BASE = 'https://d4lpkicu65.execute-api.eu-north-1.amazonaws.com/input-lambda-1-prueba';
-    
+    const API_INPUT = 'https://aora17571l.execute-api.eu-north-1.amazonaws.com/input';
+    const API_OUTPUT = 'https://aora17571l.execute-api.eu-north-1.amazonaws.com/output';
+
     const fileInput = document.getElementById('file');
     const serviceSelect = document.getElementById('service');
     const submitButton = document.getElementById('submit');
@@ -83,48 +83,44 @@
       }
 
       submitButton.disabled = true;
-      statusText.textContent = "Procesando...";
+      statusText.textContent = "Subiendo archivo...";
 
       const reader = new FileReader();
+
       reader.onload = async function () {
         try {
-          // reader.result es algo como "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,AAAA..."
-          // Separamos para obtener solo la base64
           const base64Excel = reader.result.split(',')[1];
 
-          // Armar URL con query string servicio
-          const url = `${API_ENDPOINT_BASE}?servicio=${encodeURIComponent(servicio)}`;
+          const urlInput = `${API_INPUT}?servicio=${encodeURIComponent(servicio)}`;
 
-          const response = await fetch(url, {
+          const response = await fetch(urlInput, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/octet-stream',  // archivo binario en base64
+              'Content-Type': 'application/octet-stream',
               'file-name': file.name
             },
             body: base64Excel,
           });
 
-          if (!response.ok) throw new Error("Error al generar el archivo");
+          if (!response.ok) throw new Error("Error al subir el archivo");
 
-          // Obtener blob del archivo respuesta
-          const blob = await response.blob();
+          statusText.textContent = "Archivo subido. Descargando resultado...";
+
+          // Hacemos GET al endpoint de salida
+          const outputResponse = await fetch(API_OUTPUT);
+
+          if (!outputResponse.ok) throw new Error("Error al descargar el archivo procesado");
+
+          const blob = await outputResponse.blob();
           const downloadUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = downloadUrl;
 
-          // Intentar obtener nombre desde headers (si tu Lambda lo envía)
-          const contentDisposition = response.headers.get("Content-Disposition");
-          let filename = "resultado";
+          const contentDisposition = outputResponse.headers.get("Content-Disposition");
+          let filename = "resultado.zip";
           if (contentDisposition) {
             const match = contentDisposition.match(/filename="?([^"]+)"?/);
             if (match && match[1]) filename = match[1];
-          } else {
-            // Si no hay header, agregar extensión según el tipo mime
-            const mimeType = blob.type;
-            if (mimeType === 'application/pdf') filename += ".pdf";
-            else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') filename += ".docx";
-            else if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') filename += ".xlsx";
-            else filename += ".bin";
           }
 
           a.download = filename;
@@ -133,7 +129,7 @@
           statusText.textContent = "Archivo descargado correctamente.";
         } catch (err) {
           console.error(err);
-          statusText.textContent = "Error al procesar el archivo.";
+          statusText.textContent = "Error en el proceso: " + err.message;
         } finally {
           submitButton.disabled = false;
         }
