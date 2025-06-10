@@ -86,12 +86,12 @@
 
     const reader = new FileReader();
 
-    reader.onload = async function () {
-      try {
-        const base64Excel = reader.result.split(',')[1];
-        const postData = {
-          file: base64Excel
-        };
+reader.onload = async function () {
+  try {
+    const base64Excel = reader.result.split(',')[1];
+    const postData = {
+      filedata: base64Excel  
+    };
 
         const response = await fetch(`${API_BASE}/procesar/${servicio}`, {
           method: 'POST',
