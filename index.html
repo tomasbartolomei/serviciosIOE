@@ -40,7 +40,7 @@
 <body>
   <div class="container">
     <h2>Procesador de Archivos</h2>
-    
+
     <label for="service">Seleccionar Servicio:</label>
     <select id="service" required>
       <option value="">-- Elegir una opción --</option>
@@ -88,9 +88,11 @@
 
     reader.onload = async function () {
       try {
+        // OBTENER SOLO EL BASE64 PURO
         const base64Excel = reader.result.split(',')[1];
+        // ENVIAR SIEMPRE CON LA CLAVE CORRECTA "filedata"
         const postData = {
-          filedata: base64Excel // ¡La clave correcta!
+          filedata: base64Excel
         };
 
         const response = await fetch(`${API_BASE}/procesar/${servicio}`, {
@@ -110,9 +112,9 @@
           throw new Error(msg);
         }
 
-        // Si el backend responde con un JSON con zipdata y zipname:
-        const contentType = response.headers.get('Content-Type');
-        if (contentType && contentType.includes('application/json')) {
+        // SOPORTA RESPUESTA EN JSON BASE64 O BINARIO
+        const contentType = response.headers.get('Content-Type') || "";
+        if (contentType.includes('application/json')) {
           const data = await response.json();
           if (data.zipdata && data.zipname) {
             // Descargar el archivo desde base64
@@ -135,7 +137,7 @@
           }
         }
 
-        // Si responde binario (Blob)
+        // SI RESPONDE BINARIO (ZIP)
         const blob = await response.blob();
         const downloadUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
