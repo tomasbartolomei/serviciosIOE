@@ -90,8 +90,7 @@
       try {
         const base64Excel = reader.result.split(',')[1];
         const postData = {
-          file: base64Excel,
-          filename: file.name
+          file: base64Excel
         };
 
         const response = await fetch(`${API_BASE}/procesar/${servicio}`, {
