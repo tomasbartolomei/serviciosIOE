@@ -58,85 +58,78 @@
   </div>
 
   <script>
-    const API_INPUT = 'https://aora17571l.execute-api.eu-north-1.amazonaws.com/input';
-    const API_OUTPUT = 'https://aora17571l.execute-api.eu-north-1.amazonaws.com/output';
+  const API_BASE = 'https://aora17571l.execute-api.eu-north-1.amazonaws.com'; // Base de tu HTTP API
 
-    const fileInput = document.getElementById('file');
-    const serviceSelect = document.getElementById('service');
-    const submitButton = document.getElementById('submit');
-    const statusText = document.getElementById('status');
+  const fileInput = document.getElementById('file');
+  const serviceSelect = document.getElementById('service');
+  const submitButton = document.getElementById('submit');
+  const statusText = document.getElementById('status');
 
-    function validateForm() {
-      submitButton.disabled = !(fileInput.files.length && serviceSelect.value);
+  function validateForm() {
+    submitButton.disabled = !(fileInput.files.length && serviceSelect.value);
+  }
+
+  fileInput.addEventListener('change', validateForm);
+  serviceSelect.addEventListener('change', validateForm);
+
+  submitButton.addEventListener('click', async () => {
+    const file = fileInput.files[0];
+    const servicio = serviceSelect.value;
+
+    if (!file || !servicio) {
+      alert("Seleccioná un archivo y un servicio.");
+      return;
     }
 
-    fileInput.addEventListener('change', validateForm);
-    serviceSelect.addEventListener('change', validateForm);
+    submitButton.disabled = true;
+    statusText.textContent = "Procesando archivo...";
 
-    submitButton.addEventListener('click', async () => {
-      const file = fileInput.files[0];
-      const servicio = serviceSelect.value;
+    const reader = new FileReader();
 
-      if (!file || !servicio) {
-        alert("Seleccioná un archivo y un servicio.");
-        return;
-      }
+    reader.onload = async function () {
+      try {
+        const base64Excel = reader.result.split(',')[1];
+        const postData = {
+          file: base64Excel,
+          filename: file.name
+        };
 
-      submitButton.disabled = true;
-      statusText.textContent = "Subiendo archivo...";
+        const response = await fetch(`${API_BASE}/procesar/${servicio}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(postData)
+        });
 
-      const reader = new FileReader();
+        if (!response.ok) throw new Error("Error al procesar el archivo");
 
-      reader.onload = async function () {
-        try {
-          const base64Excel = reader.result.split(',')[1];
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
 
-          const urlInput = `${API_INPUT}?servicio=${encodeURIComponent(servicio)}`;
-
-          const response = await fetch(urlInput, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/octet-stream',
-              'file-name': file.name
-            },
-            body: base64Excel,
-          });
-
-          if (!response.ok) throw new Error("Error al subir el archivo");
-
-          statusText.textContent = "Archivo subido. Descargando resultado...";
-
-          // Hacemos GET al endpoint de salida
-          const outputResponse = await fetch(API_OUTPUT);
-
-          if (!outputResponse.ok) throw new Error("Error al descargar el archivo procesado");
-
-          const blob = await outputResponse.blob();
-          const downloadUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = downloadUrl;
-
-          const contentDisposition = outputResponse.headers.get("Content-Disposition");
-          let filename = "resultado.zip";
-          if (contentDisposition) {
-            const match = contentDisposition.match(/filename="?([^"]+)"?/);
-            if (match && match[1]) filename = match[1];
-          }
-
-          a.download = filename;
-          a.click();
-          URL.revokeObjectURL(downloadUrl);
-          statusText.textContent = "Archivo descargado correctamente.";
-        } catch (err) {
-          console.error(err);
-          statusText.textContent = "Error en el proceso: " + err.message;
-        } finally {
-          submitButton.disabled = false;
+        const contentDisposition = response.headers.get("Content-Disposition");
+        let filename = "resultado.zip";
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename=\"?([^\";]+)\"?/);
+          if (match) filename = match[1];
         }
-      };
 
-      reader.readAsDataURL(file);
-    });
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
+        statusText.textContent = "Archivo descargado correctamente.";
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Error en el proceso: " + err.message;
+      } finally {
+        submitButton.disabled = false;
+      }
+    };
+
+    reader.readAsDataURL(file);
+  });
   </script>
 </body>
 </html>
